@@ -3,6 +3,7 @@ package io.dropwizard.migrations;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
@@ -33,6 +34,16 @@ public class DbCommand<T extends Configuration> extends AbstractLiquibaseCommand
 
     private void addSubcommand(AbstractLiquibaseCommand<T> subcommand) {
         subcommands.put(subcommand.getName(), subcommand);
+    }
+
+    public void configure(ArgumentParser parser) {
+        for (AbstractLiquibaseCommand<T> subcommand : subcommands.values()) {
+            final Subparser cmdParser = parser.addSubparsers()
+                                              .addParser(subcommand.getName())
+                                              .setDefault(COMMAND_NAME_ATTR, subcommand.getName())
+                                              .description(subcommand.getDescription());
+            subcommand.configure(cmdParser);
+        }
     }
 
     @Override

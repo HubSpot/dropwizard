@@ -39,19 +39,7 @@ public abstract class AbstractLiquibaseCommand<T extends Configuration> extends 
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
-        subparser.addArgument("--migrations")
-                .dest("migrations-file")
-                .help("the file containing the Liquibase migrations for the application");
-
-        subparser.addArgument("--catalog")
-                .dest("catalog")
-                .help("Specify the database catalog (use database default if omitted)");
-
-        subparser.addArgument("--schema")
-                .dest("schema")
-                .help("Specify the database schema (use database default if omitted)");
+      // don't call super because we don't want the file arg
     }
 
     @Override
