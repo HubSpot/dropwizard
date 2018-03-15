@@ -46,6 +46,7 @@ public class DbMigrateCommand<T extends Configuration> extends AbstractLiquibase
         subparser.addArgument("-i", "--include")
                  .action(Arguments.append())
                  .dest("contexts")
+                 .setDefault("job,service")
                  .help("include change sets from the given context");
     }
 
