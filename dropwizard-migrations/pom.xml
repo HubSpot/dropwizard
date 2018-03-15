@@ -8,7 +8,8 @@
         <version>1.0.9</version>
     </parent>
 
-    <artifactId>dropwizard-migrations</artifactId>
+    <artifactId>dropwizard-migrations-hubspot</artifactId>
+    <version>1.0.9-hubspot-SNAPSHOT</version>
     <name>Dropwizard Migrations</name>
 
     <dependencyManagement>
@@ -16,7 +17,7 @@
             <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-bom</artifactId>
-                <version>${project.version}</version>
+                <version>1.0.9</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

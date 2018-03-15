@@ -4,3 +4,10 @@ buildpack:
   repository: Blazar-Buildpack-Java
   branch: v2
 
+env:
+  SKIP_VERSION_OVERRIDE: true
+
+before:
+  - description: Override version based on branch
+    commands:
+      - sed -i "s/1.0.9-hubspot-SNAPSHOT/1.0.9-$GIT_BRANCH-SNAPSHOT/g" pom.xml
