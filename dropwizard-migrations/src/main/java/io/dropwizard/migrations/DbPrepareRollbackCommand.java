@@ -1,8 +1,6 @@
 package io.dropwizard.migrations;
 
 import com.google.common.base.Joiner;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -12,15 +10,13 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class DbPrepareRollbackCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbPrepareRollbackCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("prepare-rollback", "Generate rollback DDL scripts for pending change sets.", strategy, configurationClass, migrationsFileName);
+public class DbPrepareRollbackCommand extends AbstractLiquibaseCommand {
+    public DbPrepareRollbackCommand() {
+        super("prepare-rollback", "Generate rollback DDL scripts for pending change sets.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-c", "--count")
                  .dest("count")
                  .type(Integer.class)

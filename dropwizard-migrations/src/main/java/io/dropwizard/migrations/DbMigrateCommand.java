@@ -3,8 +3,6 @@ package io.dropwizard.migrations;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -15,7 +13,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class DbMigrateCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
+public class DbMigrateCommand extends AbstractLiquibaseCommand {
 
     private PrintStream outputStream = System.out;
 
@@ -24,14 +22,12 @@ public class DbMigrateCommand<T extends Configuration> extends AbstractLiquibase
         this.outputStream = outputStream;
     }
 
-    public DbMigrateCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("migrate", "Apply all pending change sets.", strategy, configurationClass, migrationsFileName);
+    public DbMigrateCommand() {
+        super("migrate", "Apply all pending change sets.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-n", "--dry-run")
                  .action(Arguments.storeTrue())
                  .dest("dry-run")

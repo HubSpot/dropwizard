@@ -1,7 +1,5 @@
 package io.dropwizard.migrations;
 
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import liquibase.change.CheckSum;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -9,17 +7,15 @@ import net.sourceforge.argparse4j.inf.Subparser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DbCalculateChecksumCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
+public class DbCalculateChecksumCommand extends AbstractLiquibaseCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger("liquibase");
 
-    public DbCalculateChecksumCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("calculate-checksum", "Calculates and prints a checksum for a change set", strategy, configurationClass, migrationsFileName);
+    public DbCalculateChecksumCommand() {
+        super("calculate-checksum", "Calculates and prints a checksum for a change set");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("id").nargs(1).help("change set id");
         subparser.addArgument("author").nargs(1).help("author name");
     }

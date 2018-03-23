@@ -1,8 +1,6 @@
 package io.dropwizard.migrations;
 
 import com.google.common.base.Joiner;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -13,19 +11,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 
-public class DbRollbackCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbRollbackCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("rollback",
-              "Rollback the database schema to a previous version.",
-              strategy,
-              configurationClass,
-              migrationsFileName);
+public class DbRollbackCommand extends AbstractLiquibaseCommand {
+    public DbRollbackCommand() {
+        super("rollback", "Rollback the database schema to a previous version.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-n", "--dry-run")
                  .action(Arguments.storeTrue())
                  .dest("dry-run")

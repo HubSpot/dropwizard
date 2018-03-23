@@ -5,7 +5,6 @@ buildpack:
   branch: v2
 
 env:
-  MAVEN_ARGS: -DskipTests
   SKIP_VERSION_OVERRIDE: true
 
 before:

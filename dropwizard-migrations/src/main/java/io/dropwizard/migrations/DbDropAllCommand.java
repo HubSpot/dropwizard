@@ -1,20 +1,17 @@
 package io.dropwizard.migrations;
 
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
-public class DbDropAllCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbDropAllCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("drop-all", "Delete all user-owned objects from the database.", strategy, configurationClass, migrationsFileName);
+public class DbDropAllCommand extends AbstractLiquibaseCommand {
+    public DbDropAllCommand() {
+        super("drop-all", "Delete all user-owned objects from the database.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
         subparser.addArgument("--confirm-delete-everything")
                  .action(Arguments.storeTrue())
                  .required(true)

@@ -1,8 +1,6 @@
 package io.dropwizard.migrations;
 
 import com.google.common.base.Joiner;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -12,19 +10,13 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class DbFastForwardCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    protected DbFastForwardCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("fast-forward",
-              "Mark the next pending change set as applied without running it",
-              strategy,
-              configurationClass,
-              migrationsFileName);
+public class DbFastForwardCommand extends AbstractLiquibaseCommand {
+    protected DbFastForwardCommand() {
+        super("fast-forward", "Mark the next pending change set as applied without running it");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-n", "--dry-run")
                  .action(Arguments.storeTrue())
                  .dest("dry-run")

@@ -1,8 +1,6 @@
 package io.dropwizard.migrations;
 
 import com.google.common.base.Joiner;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -10,15 +8,13 @@ import net.sourceforge.argparse4j.inf.Subparser;
 
 import java.util.List;
 
-public class DbTestCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbTestCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("test", "Apply and rollback pending change sets.", strategy, configurationClass, migrationsFileName);
+public class DbTestCommand extends AbstractLiquibaseCommand {
+    public DbTestCommand() {
+        super("test", "Apply and rollback pending change sets.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-i", "--include")
                  .action(Arguments.append())
                  .dest("contexts")

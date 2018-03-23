@@ -1,21 +1,17 @@
 package io.dropwizard.migrations;
 
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
-public class DbLocksCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbLocksCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("locks", "Manage database migration locks", strategy, configurationClass, migrationsFileName);
+public class DbLocksCommand extends AbstractLiquibaseCommand {
+    public DbLocksCommand() {
+        super("locks", "Manage database migration locks");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-l", "--list")
                  .dest("list")
                  .action(Arguments.storeTrue())

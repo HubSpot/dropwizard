@@ -1,8 +1,6 @@
 package io.dropwizard.migrations;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.CatalogAndSchema;
 import liquibase.Liquibase;
 import liquibase.database.Database;
@@ -39,7 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DbDumpCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
+public class DbDumpCommand extends AbstractLiquibaseCommand {
 
     private PrintStream outputStream = System.out;
 
@@ -48,18 +46,12 @@ public class DbDumpCommand<T extends Configuration> extends AbstractLiquibaseCom
         this.outputStream = outputStream;
     }
 
-    public DbDumpCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("dump",
-              "Generate a dump of the existing database state.",
-              strategy,
-              configurationClass,
-              migrationsFileName);
+    public DbDumpCommand() {
+        super("dump", "Generate a dump of the existing database state.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-o", "--output")
                  .dest("output")
                  .help("Write output to <file> instead of stdout");

@@ -1,20 +1,16 @@
 package io.dropwizard.migrations;
 
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
-public class DbTagCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
-    public DbTagCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("tag", "Tag the database schema.", strategy, configurationClass, migrationsFileName);
+public class DbTagCommand extends AbstractLiquibaseCommand {
+    public DbTagCommand() {
+        super("tag", "Tag the database schema.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("tag-name")
                 .dest("tag-name")
                 .nargs(1)

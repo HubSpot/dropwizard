@@ -3,8 +3,6 @@ package io.dropwizard.migrations;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -15,7 +13,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class DbStatusCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
+public class DbStatusCommand extends AbstractLiquibaseCommand {
 
     private PrintStream outputStream = System.out;
 
@@ -24,14 +22,12 @@ public class DbStatusCommand<T extends Configuration> extends AbstractLiquibaseC
         this.outputStream = outputStream;
     }
 
-    public DbStatusCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
-        super("status", "Check for pending change sets.", strategy, configurationClass, migrationsFileName);
+    public DbStatusCommand() {
+        super("status", "Check for pending change sets.");
     }
 
     @Override
     public void configure(Subparser subparser) {
-        super.configure(subparser);
-
         subparser.addArgument("-v", "--verbose")
                  .action(Arguments.storeTrue())
                  .dest("verbose")
