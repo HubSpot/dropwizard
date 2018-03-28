@@ -1,2 +1,8 @@
 env:
   SET_VERSION_OVERRIDE: 0.6.2-hubspot-SNAPSHOT
+
+buildpack:
+  host: git.hubteam.com
+  organization: HubSpot
+  repository: Blazar-Buildpack-Java
+  branch: v2-single-module
