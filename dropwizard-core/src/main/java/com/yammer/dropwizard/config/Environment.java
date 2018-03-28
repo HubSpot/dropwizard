@@ -1,6 +1,39 @@
 package com.yammer.dropwizard.config;
 
-import com.google.common.collect.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.EventListener;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nullable;
+import javax.servlet.Filter;
+import javax.servlet.Servlet;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.Path;
+import javax.ws.rs.ext.Provider;
+
+import org.eclipse.jetty.server.session.SessionHandler;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.component.AbstractLifeCycle;
+import org.eclipse.jetty.util.component.ContainerLifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.resource.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.core.reflection.AnnotatedMethod;
@@ -18,27 +51,6 @@ import com.yammer.dropwizard.tasks.GarbageCollectionTask;
 import com.yammer.dropwizard.tasks.Task;
 import com.yammer.dropwizard.validation.Validator;
 import com.yammer.metrics.core.HealthCheck;
-import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.component.AbstractLifeCycle;
-import org.eclipse.jetty.util.component.AggregateLifeCycle;
-import org.eclipse.jetty.util.component.LifeCycle;
-import org.eclipse.jetty.util.resource.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.Path;
-import javax.ws.rs.ext.Provider;
-import java.util.EventListener;
-import java.util.List;
-import java.util.concurrent.*;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 // TODO: 10/12/11 <coda> -- test Environment
 /*
@@ -65,7 +77,7 @@ public class Environment extends AbstractLifeCycle {
     private final ImmutableSet.Builder<String> protectedTargets;
     private final ImmutableList.Builder<ServerLifecycleListener> serverListeners;
     private Resource baseResource;
-    private final AggregateLifeCycle lifeCycle;
+    private final ContainerLifeCycle lifeCycle;
     private final ObjectMapperFactory objectMapperFactory;
     private SessionHandler sessionHandler;
     private ServletContainer jerseyServletContainer;
@@ -106,7 +118,7 @@ public class Environment extends AbstractLifeCycle {
         this.baseResource = Resource.newClassPathResource(".");
         this.protectedTargets = ImmutableSet.builder();
         this.serverListeners = ImmutableList.builder();
-        this.lifeCycle = new AggregateLifeCycle();
+        this.lifeCycle = new ContainerLifeCycle();
         this.jerseyServletContainer = new ServletContainer(config);
         addTask(new GarbageCollectionTask());
     }

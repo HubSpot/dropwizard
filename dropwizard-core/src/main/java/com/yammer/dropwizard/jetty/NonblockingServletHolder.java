@@ -1,10 +1,14 @@
 package com.yammer.dropwizard.jetty;
 
+import java.io.IOException;
+
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.servlet.ServletHolder;
-
-import javax.servlet.*;
-import java.io.IOException;
 
 /**
  * A {@link ServletHolder} subclass which removes the synchronization around servlet initialization
@@ -15,19 +19,18 @@ public class NonblockingServletHolder extends ServletHolder {
 
     public NonblockingServletHolder(Servlet servlet) {
         super(servlet);
+        setInitOrder(1);
         this.servlet = servlet;
     }
 
     @Override
     public boolean equals(Object o) {
-        return (o instanceof NonblockingServletHolder) && (this.compareTo(o) == 0);
+        return super.equals(o);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = (31 * result) + ((servlet != null) ? servlet.hashCode() : 0);
-        return result;
+        return super.hashCode();
     }
 
     @Override
@@ -41,12 +44,12 @@ public class NonblockingServletHolder extends ServletHolder {
                        ServletResponse response) throws ServletException, IOException {
         final boolean asyncSupported = baseRequest.isAsyncSupported();
         if (!isAsyncSupported()) {
-            baseRequest.setAsyncSupported(false);
+            baseRequest.setAsyncSupported(false, null);
         }
         try {
             servlet.service(request, response);
         } finally {
-            baseRequest.setAsyncSupported(asyncSupported);
+            baseRequest.setAsyncSupported(asyncSupported, null);
         }
     }
 }

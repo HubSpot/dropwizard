@@ -409,22 +409,24 @@ public class ServerFactory {
         final InstrumentedHandler instrumented = new InstrumentedHandler(handler);
         final GzipConfiguration gzip = config.getGzipConfiguration();
         if (gzip.isEnabled()) {
-            final BiDiGzipHandler gzipHandler = new BiDiGzipHandler(instrumented);
+            final BiDiGzipHandler gzipHandler = new BiDiGzipHandler();
+            gzipHandler.setHandler(instrumented);
+            gzipHandler.setInflateNoWrap(true);
 
             final Size minEntitySize = gzip.getMinimumEntitySize();
             gzipHandler.setMinGzipSize((int) minEntitySize.toBytes());
 
             final Size bufferSize = gzip.getBufferSize();
-            gzipHandler.setBufferSize((int) bufferSize.toBytes());
+            gzipHandler.setInputBufferSize((int) bufferSize.toBytes());
 
             final ImmutableSet<String> userAgents = gzip.getExcludedUserAgents();
             if (!userAgents.isEmpty()) {
-                gzipHandler.setExcluded(userAgents);
+                gzipHandler.setExcludedAgentPatterns(Iterables.toArray(userAgents, String.class));
             }
 
             final ImmutableSet<String> mimeTypes = gzip.getCompressedMimeTypes();
             if (!mimeTypes.isEmpty()) {
-                gzipHandler.setMimeTypes(mimeTypes);
+                gzipHandler.setIncludedMimeTypes(Iterables.toArray(mimeTypes, String.class));
             }
 
             return gzipHandler;
