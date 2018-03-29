@@ -95,7 +95,7 @@ public class ServerFactory {
         }
 
         final Server server = createServer();
-        server.setHandler(createHandler(server, env));
+        addHandler(server, env);
         server.addBean(env);
         return server;
     }
@@ -113,13 +113,7 @@ public class ServerFactory {
         return server;
     }
 
-    private Handler createHandler(Server server, Environment env) {
-        /*
-        if (requestLogHandlerFactory.isEnabled()) {
-            collection.addHandler(requestLogHandlerFactory.build());
-        }
-        */
-
+    private void addHandler(Server server, Environment env) {
         final Handler applicationHandler = createAppServlet(server, env, Metrics.defaultRegistry());
         final Handler adminHandler = createAdminServlet(server, env, Metrics.defaultRegistry());
 
@@ -151,8 +145,6 @@ public class ServerFactory {
 
         final Handler gzipHandler = config.getGzipConfiguration().build(routingHandler);
         server.setHandler(addStatsHandler(addRequestLog(server, gzipHandler, env.getName())));
-
-        return server;
     }
 
     protected Handler addRequestLog(Server server, Handler handler, String name) {

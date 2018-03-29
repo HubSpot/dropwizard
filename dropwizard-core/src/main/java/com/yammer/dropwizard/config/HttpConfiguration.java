@@ -60,6 +60,16 @@ public class HttpConfiguration {
         public static ConnectorType parse(String type) {
             return valueOf(type.toUpperCase(Locale.ENGLISH).replace('+', '_'));
         }
+
+        public boolean isSsl() {
+            switch (this) {
+                case LEGACY_SSL:
+                case NONBLOCKING_SSL:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 
     @Valid
@@ -463,7 +473,7 @@ public class HttpConfiguration {
         final Timer timer = metrics.newTimer(HttpConnectionFactory.class, "connections", Integer.toString(port));
 
         final ConnectionFactory[] connectionFactories;
-        if (isSslConfigured()) {
+        if (isSslEnabled()) {
             final SslContextFactory sslContextFactory = ssl.build();
 
             server.addBean(sslContextFactory);
@@ -534,7 +544,7 @@ public class HttpConfiguration {
             httpConfig.addCustomizer(new ForwardedRequestCustomizer());
         }
 
-        if (isSslConfigured()) {
+        if (isSslEnabled()) {
             httpConfig.setSecureScheme("https");
             httpConfig.setSecurePort(port);
             httpConfig.addCustomizer(new SecureRequestCustomizer());
@@ -548,5 +558,9 @@ public class HttpConfiguration {
         return new ArrayByteBufferPool((int) Size.bytes(64).toBytes(),
                                        (int) Size.bytes(1024).toBytes(),
                                        (int) Size.kilobytes(64).toBytes());
+    }
+
+    private boolean isSslEnabled() {
+        return getConnectorType().isSsl();
     }
 }
