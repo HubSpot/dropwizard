@@ -1,7 +1,7 @@
 package com.yammer.dropwizard.assets.tests;
 
-import com.google.common.net.HttpHeaders;
-import com.yammer.dropwizard.assets.AssetServlet;
+import static org.fest.assertions.api.Assertions.assertThat;
+
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.testing.HttpTester;
 import org.eclipse.jetty.testing.ServletTester;
@@ -9,7 +9,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import com.google.common.net.HttpHeaders;
+import com.yammer.dropwizard.assets.AssetServlet;
 
 public class AssetServletTest {
     private static final String DUMMY_SERVLET = "/dummy_servlet/";
@@ -87,14 +88,14 @@ public class AssetServletTest {
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.getContentType())
-                .isEqualTo(MimeTypes.TEXT_PLAIN_UTF_8);
+                .isEqualTo(MimeTypes.Type.TEXT_PLAIN_UTF_8.asString());
         
         request.setURI(NOCHARSET_SERVLET + "example.txt");
         response.parse(servletTester.getResponses(request.generate()));
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.getContentType())
-                .isEqualTo(MimeTypes.TEXT_PLAIN);
+                .isEqualTo(MimeTypes.Type.TEXT_PLAIN.asString());
     }
     
     @Test
@@ -216,7 +217,7 @@ public class AssetServletTest {
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.getContentType())
-                .isEqualTo(MimeTypes.TEXT_PLAIN_UTF_8);
+                .isEqualTo(MimeTypes.Type.TEXT_PLAIN_UTF_8.asString());
     }
 
     @Test
@@ -226,7 +227,7 @@ public class AssetServletTest {
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.getContentType())
-                .isEqualTo(MimeTypes.TEXT_HTML_UTF_8);
+                .isEqualTo(MimeTypes.Type.TEXT_HTML_UTF_8.asString());
     }
 
     @Test

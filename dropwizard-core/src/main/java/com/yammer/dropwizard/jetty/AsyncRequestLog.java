@@ -1,12 +1,14 @@
 package com.yammer.dropwizard.jetty;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.LoggingEvent;
-import ch.qos.logback.core.Appender;
-import ch.qos.logback.core.spi.AppenderAttachableImpl;
-import com.yammer.metrics.core.Clock;
-import org.eclipse.jetty.http.HttpHeaders;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eclipse.jetty.server.Authentication;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.RequestLog;
@@ -14,10 +16,14 @@ import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.DateCache;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.common.net.HttpHeaders;
+import com.yammer.metrics.core.Clock;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.LoggingEvent;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.spi.AppenderAttachableImpl;
 
 /**
  * A non-blocking, asynchronous {@link RequestLog} implementation which implements a subset of the
@@ -80,9 +86,7 @@ public class AsyncRequestLog extends AbstractLifeCycle implements RequestLog {
         this.dateCache = new ThreadLocal<DateCache>() {
             @Override
             protected DateCache initialValue() {
-                final DateCache cache = new DateCache("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
-                cache.setTimeZoneID(timeZone.getID());
-                return cache;
+                return new DateCache("dd/MMM/yyyy:HH:mm:ss Z", Locale.US, timeZone);
             }
         };
 
@@ -134,21 +138,19 @@ public class AsyncRequestLog extends AbstractLifeCycle implements RequestLog {
         buf.append("] \"");
         buf.append(request.getMethod());
         buf.append(' ');
-        buf.append(request.getUri().toString());
+        buf.append(request.getHttpURI().toString());
         buf.append(' ');
         buf.append(request.getProtocol());
         buf.append("\" ");
-        if (request.getAsyncContinuation().isInitial()) {
-            int status = response.getStatus();
-            if (status <= 0) {
-                status = 404;
-            }
-            buf.append((char) ('0' + ((status / 100) % 10)));
-            buf.append((char) ('0' + ((status / 10) % 10)));
-            buf.append((char) ('0' + (status % 10)));
-        } else {
-            buf.append("Async");
+
+        // TODO do we need to check request.getHttpChannelState().isInitial() ?
+        int status = response.getStatus();
+        if (status <= 0) {
+            status = 404;
         }
+        buf.append((char) ('0' + ((status / 100) % 10)));
+        buf.append((char) ('0' + ((status / 10) % 10)));
+        buf.append((char) ('0' + (status % 10)));
 
         final long responseLength = response.getContentCount();
         if (responseLength >= 0) {
@@ -175,10 +177,10 @@ public class AsyncRequestLog extends AbstractLifeCycle implements RequestLog {
         }
 
         final long now = clock.time();
-        final long dispatchTime = request.getDispatchTime();
 
         buf.append(' ');
-        buf.append(now - ((dispatchTime == 0) ? request.getTimeStamp() : dispatchTime));
+        // TODO do we need to find an equivalent for request.getDispatchTime() ?
+        buf.append(now - request.getTimeStamp());
 
         buf.append(' ');
         buf.append(now - request.getTimeStamp());

@@ -145,9 +145,8 @@
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-http</artifactId>
-            <version>${jetty.version}</version>
-            <type>test-jar</type>
+            <artifactId>test-jetty-servlet</artifactId>
+            <version>8.1.10.v20130312</version>
             <scope>test</scope>
         </dependency>
         <dependency>
