@@ -2,6 +2,7 @@ package com.yammer.dropwizard.config;
 
 import java.util.EnumSet;
 import java.util.EventListener;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
@@ -15,9 +16,9 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.bio.SocketConnector;
 import org.eclipse.jetty.server.handler.ErrorHandler;
-import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -109,16 +110,6 @@ public class ServerFactory {
         server.setStopAtShutdown(true);
         server.setStopTimeout(config.getShutdownGracePeriod().toMilliseconds());
 
-        // TODO add connectors/handlers
-        /*
-        server.addConnector(createExternalConnector());
-
-        // if we're dynamically allocating ports, no worries if they are the same (i.e. 0)
-        if (config.getAdminPort() == 0 || (config.getAdminPort() != config.getPort()) ) {
-            server.addConnector(createInternalConnector());
-        }
-         */
-
         return server;
     }
 
@@ -132,30 +123,57 @@ public class ServerFactory {
         final Handler applicationHandler = createAppServlet(server, env, Metrics.defaultRegistry());
         final Handler adminHandler = createAdminServlet(server, env, Metrics.defaultRegistry());
 
-        // simple server
+        final Handler routingHandler;
+        if (config.getAdminPort() != 0 && config.getAdminPort() == config.getPort()) {
+            // use "simple" server with one connector
+            final Connector conn = buildAppConnector(server, env, Metrics.defaultRegistry());
 
-        final Connector conn = config.build(server, Metrics.defaultRegistry(), env.getName(), null);
+            server.addConnector(conn);
 
-        server.addConnector(conn);
+            routingHandler = new ContextRoutingHandler(ImmutableMap.of(
+                config.getRootPath(), applicationHandler,
+                "/admin", adminHandler
+            ));
+        } else {
+            // use "default" server with multiple connectors
+            final Map<Connector, Handler> handlers = new LinkedHashMap<Connector, Handler>();
 
-        final ContextRoutingHandler routingHandler = new ContextRoutingHandler(ImmutableMap.of(
-            config.getRootPath(), applicationHandler,
-            "/admin", adminHandler
-        ));
+            Connector appConnector = buildAppConnector(server, env, Metrics.defaultRegistry());
+            server.addConnector(appConnector);
+            handlers.put(appConnector, applicationHandler);
 
-        // default server
+            Connector adminConnector = buildAdminConnector(server, env, Metrics.defaultRegistry());
+            server.addConnector(adminConnector);
+            handlers.put(adminConnector, adminHandler);
 
-        final RoutingHandler routingHandler = buildRoutingHandler(environment.metrics(),
-            server,
-            applicationHandler,
-            adminHandler);
-
-        //
+            routingHandler = new RoutingHandler(handlers);
+        }
 
         final Handler gzipHandler = config.getGzipConfiguration().build(routingHandler);
         server.setHandler(addStatsHandler(addRequestLog(server, gzipHandler, env.getName())));
 
         return server;
+    }
+
+    protected Handler addRequestLog(Server server, Handler handler, String name) {
+        if (requestLogHandlerFactory.isEnabled()) {
+            final RequestLogHandler requestLogHandler = requestLogHandlerFactory.build();
+            // server should own the request log's lifecycle since it's already started,
+            // the handler might not become managed in case of an error which would leave
+            // the request log stranded
+            server.addBean(requestLogHandler.getRequestLog(), true);
+            requestLogHandler.setHandler(handler);
+            return requestLogHandler;
+        }
+        return handler;
+    }
+
+    protected Handler addStatsHandler(Handler handler) {
+        // Graceful shutdown is implemented via the statistics handler,
+        // see https://bugs.eclipse.org/bugs/show_bug.cgi?id=420142
+        final StatisticsHandler statisticsHandler = new StatisticsHandler();
+        statisticsHandler.setHandler(handler);
+        return statisticsHandler;
     }
 
     protected Handler createAppServlet(Server server, Environment env, MetricsRegistry metricsRegistry) {
@@ -207,18 +225,27 @@ public class ServerFactory {
         handler.addServlet(new ServletHolder(new TaskServlet(env.getTasks())), "/tasks/*");
         handler.addServlet(new ServletHolder(new AdminServlet()), "/*");
 
-        if (config.getAdminPort() != 0 && config.getAdminPort() == config.getPort()) {
-            handler.setContextPath("/admin");
-            handler.setConnectorNames(new String[]{"main"});
-        } else {
-            handler.setConnectorNames(new String[]{"internal"});
-        }
+        //handler.setContextPath("/admin"); TODO remove if not necessary
 
         if (config.getAdminUsername().isPresent() || config.getAdminPassword().isPresent()) {
             handler.setSecurityHandler(basicAuthHandler(config.getAdminUsername().or(""), config.getAdminPassword().or("")));
         }
 
         return handler;
+    }
+
+    private Connector buildAppConnector(Server server, Environment env, MetricsRegistry metricsRegistry) {
+        return config.buildApp(server, metricsRegistry, env.getName(), null);
+    }
+
+    private Connector buildAdminConnector(Server server, Environment env, MetricsRegistry metricsRegistry) {
+        // threadpool is shared between all the connectors, so it should be managed by the server instead of the
+        // individual connectors
+        final QueuedThreadPool threadPool = new InstrumentedQueuedThreadPool(metricsRegistry, 8, 1);
+        threadPool.setName("dw-admin");
+        server.addBean(threadPool);
+
+        return config.buildAdmin(server, metricsRegistry, "admin", threadPool);
     }
 
     private SecurityHandler basicAuthHandler(String username, String password) {
@@ -262,14 +289,5 @@ public class ServerFactory {
         );
         threadPool.setName("dw");
         return threadPool;
-    }
-
-    private Connector createInternalConnector() {
-        final SocketConnector connector = new SocketConnector();
-        connector.setHost(config.getBindHost().orNull());
-        connector.setPort(config.getAdminPort());
-        connector.setName("internal");
-        connector.setThreadPool(new QueuedThreadPool(8));
-        return connector;
     }
 }

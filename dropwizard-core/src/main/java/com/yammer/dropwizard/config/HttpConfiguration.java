@@ -447,11 +447,20 @@ public class HttpConfiguration {
         this.adminPassword = password;
     }
 
-    public Connector build(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
-        final org.eclipse.jetty.server.HttpConfiguration httpConfig = buildHttpConfiguration();
+    public Connector buildApp(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
+        return build(server, metrics, name, threadPool, getPort());
+
+    }
+
+    public Connector buildAdmin(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
+        return build(server, metrics, name, threadPool, getAdminPort());
+    }
+
+    public Connector build(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool, int port) {
+        final org.eclipse.jetty.server.HttpConfiguration httpConfig = buildHttpConfiguration(port);
 
         final HttpConnectionFactory httpConnectionFactory = buildHttpConnectionFactory(httpConfig);
-        final Timer timer = metrics.newTimer(HttpConnectionFactory.class, "connections", Integer.toString(getPort()));
+        final Timer timer = metrics.newTimer(HttpConnectionFactory.class, "connections", Integer.toString(port));
 
         final ConnectionFactory[] connectionFactories;
         if (isSslConfigured()) {
@@ -476,7 +485,7 @@ public class HttpConfiguration {
 
         final ByteBufferPool bufferPool = buildBufferPool();
 
-        return buildConnector(server, scheduler, bufferPool, name, threadPool, connectionFactories);
+        return buildConnector(server, scheduler, bufferPool, name, threadPool, port, connectionFactories);
     }
 
     protected ServerConnector buildConnector(Server server,
@@ -484,6 +493,7 @@ public class HttpConfiguration {
                                              ByteBufferPool bufferPool,
                                              String name,
                                              @Nullable ThreadPool threadPool,
+                                             int port,
                                              ConnectionFactory... factories) {
         final ServerConnector connector = new ServerConnector(server,
                                                               threadPool,
@@ -492,7 +502,7 @@ public class HttpConfiguration {
                                                               getAcceptorThreads(),
                                                               getAcceptorThreads() * 2,
                                                               factories);
-        connector.setPort(getPort());
+        connector.setPort(port);
         connector.setHost(getBindHost().orNull());
         connector.setAcceptQueueSize(acceptQueueSize);
 
@@ -512,7 +522,7 @@ public class HttpConfiguration {
         return httpConnectionFactory;
     }
 
-    protected org.eclipse.jetty.server.HttpConfiguration buildHttpConfiguration() {
+    protected org.eclipse.jetty.server.HttpConfiguration buildHttpConfiguration(int port) {
         final org.eclipse.jetty.server.HttpConfiguration httpConfig = new org.eclipse.jetty.server.HttpConfiguration();
         httpConfig.setOutputBufferSize((int) getResponseBufferSize().toBytes());
         httpConfig.setRequestHeaderSize((int) getRequestHeaderBufferSize().toBytes());
@@ -526,7 +536,7 @@ public class HttpConfiguration {
 
         if (isSslConfigured()) {
             httpConfig.setSecureScheme("https");
-            httpConfig.setSecurePort(getPort());
+            httpConfig.setSecurePort(port);
             httpConfig.addCustomizer(new SecureRequestCustomizer());
         }
 
