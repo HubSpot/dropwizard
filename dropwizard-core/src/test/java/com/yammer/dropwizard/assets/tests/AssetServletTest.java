@@ -88,14 +88,14 @@ public class AssetServletTest {
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.get(HttpHeaders.CONTENT_TYPE))
-                .isEqualTo(MimeTypes.Type.TEXT_PLAIN_UTF_8.asString());
+                .isEqualToIgnoringCase(MimeTypes.Type.TEXT_PLAIN_UTF_8.asString());
         
         request.setURI(NOCHARSET_SERVLET + "example.txt");
         response = HttpTester.parseResponse(servletTester.getResponses(request.generate()));
         assertThat(response.getStatus())
                 .isEqualTo(200);
         assertThat(response.get(HttpHeaders.CONTENT_TYPE))
-                .isEqualTo(MimeTypes.Type.TEXT_PLAIN.asString());
+                .isEqualToIgnoringCase(MimeTypes.Type.TEXT_PLAIN.asString());
     }
     
     @Test
