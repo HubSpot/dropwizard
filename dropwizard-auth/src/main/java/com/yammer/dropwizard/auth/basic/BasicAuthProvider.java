@@ -1,5 +1,15 @@
 package com.yammer.dropwizard.auth.basic;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.eclipse.jetty.util.B64Code;
+import org.eclipse.jetty.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Optional;
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.api.model.Parameter;
@@ -11,16 +21,6 @@ import com.sun.jersey.spi.inject.InjectableProvider;
 import com.yammer.dropwizard.auth.Auth;
 import com.yammer.dropwizard.auth.AuthenticationException;
 import com.yammer.dropwizard.auth.Authenticator;
-import org.eclipse.jetty.util.B64Code;
-import org.eclipse.jetty.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.io.UnsupportedEncodingException;
 
 /**
  * A Jersey provider for Basic HTTP authentication.
@@ -70,8 +70,6 @@ public class BasicAuthProvider<T> implements InjectableProvider<Auth, Parameter>
                         }
                     }
                 }
-            } catch (UnsupportedEncodingException e) {
-                LOGGER.debug("Error decoding credentials", e);
             } catch (IllegalArgumentException e) {
                 LOGGER.debug("Error decoding credentials", e);
             } catch (AuthenticationException e) {
