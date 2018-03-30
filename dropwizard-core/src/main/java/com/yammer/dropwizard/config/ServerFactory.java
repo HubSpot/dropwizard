@@ -4,7 +4,6 @@ import java.util.EnumSet;
 import java.util.EventListener;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 
 import javax.servlet.DispatcherType;
 
@@ -22,11 +21,9 @@ import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Credential;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +37,6 @@ import com.yammer.dropwizard.jetty.RoutingHandler;
 import com.yammer.dropwizard.jetty.UnbrandedErrorHandler;
 import com.yammer.dropwizard.servlets.ThreadNameFilter;
 import com.yammer.dropwizard.tasks.TaskServlet;
-import com.yammer.dropwizard.util.Duration;
 import com.yammer.metrics.HealthChecks;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.HealthCheck;
@@ -101,7 +97,7 @@ public class ServerFactory {
     }
 
     private Server createServer() {
-        final Server server = new Server(createThreadPool());
+        final Server server = new Server(config.buildThreadPool());
 
         ErrorHandler errorHandler = new UnbrandedErrorHandler();
         errorHandler.setServer(server);
@@ -261,25 +257,5 @@ public class ServerFactory {
         csh.setLoginService(loginService);
 
         return csh;
-    }
-
-    private ThreadPool createThreadPool() {
-        int minThreads = config.getMinThreads();
-        int maxThreads = config.getMaxThreads();
-        int maxQueuedRequests = config.getAcceptQueueSize();
-        final BlockingQueue<Runnable> queue = new BlockingArrayQueue<Runnable>(
-            minThreads,
-            maxThreads,
-            maxQueuedRequests
-        );
-        final InstrumentedQueuedThreadPool threadPool = new InstrumentedQueuedThreadPool(
-            Metrics.defaultRegistry(),
-            maxThreads,
-            minThreads,
-            (int) Duration.minutes(1).toMilliseconds(),
-            queue
-        );
-        threadPool.setName("dw");
-        return threadPool;
     }
 }

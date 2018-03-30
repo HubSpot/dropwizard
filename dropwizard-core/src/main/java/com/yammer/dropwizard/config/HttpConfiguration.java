@@ -2,6 +2,7 @@ package com.yammer.dropwizard.config;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
@@ -20,6 +21,7 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
@@ -30,11 +32,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.yammer.dropwizard.jetty.InstrumentedQueuedThreadPool;
 import com.yammer.dropwizard.jetty.Jetty93InstrumentedConnectionFactory;
 import com.yammer.dropwizard.util.Duration;
 import com.yammer.dropwizard.util.Size;
 import com.yammer.dropwizard.validation.PortRange;
 import com.yammer.dropwizard.validation.ValidationMethod;
+import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 
@@ -496,6 +500,26 @@ public class HttpConfiguration {
         final ByteBufferPool bufferPool = buildBufferPool();
 
         return buildConnector(server, scheduler, bufferPool, name, threadPool, port, connectionFactories);
+    }
+
+    public ThreadPool buildThreadPool() {
+      int minThreads = getMinThreads();
+      int maxThreads = getMaxThreads();
+      int maxQueuedRequests = getAcceptQueueSize();
+      final BlockingQueue<Runnable> queue = new BlockingArrayQueue<Runnable>(
+          minThreads,
+          maxThreads,
+          maxQueuedRequests
+      );
+      final InstrumentedQueuedThreadPool threadPool = new InstrumentedQueuedThreadPool(
+          Metrics.defaultRegistry(),
+          maxThreads,
+          minThreads,
+          (int) Duration.minutes(1).toMilliseconds(),
+          queue
+      );
+      threadPool.setName("dw");
+      return threadPool;
     }
 
     protected ServerConnector buildConnector(Server server,
