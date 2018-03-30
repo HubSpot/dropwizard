@@ -8,9 +8,12 @@ import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.util.component.ContainerLifeCycle;
 
 import com.google.common.base.Preconditions;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
@@ -22,10 +25,12 @@ public class Jetty93InstrumentedConnectionFactory extends ContainerLifeCycle imp
 
   private final ConnectionFactory connectionFactory;
   private final Timer timer;
+  private final Counter counter;
 
-  public Jetty93InstrumentedConnectionFactory(ConnectionFactory connectionFactory, Timer timer) {
+  public Jetty93InstrumentedConnectionFactory(ConnectionFactory connectionFactory, MetricsRegistry metrics) {
     this.connectionFactory = connectionFactory;
-    this.timer = timer;
+    this.timer = metrics.newTimer(HttpConnectionFactory.class, "connections");
+    this.counter = metrics.newCounter(HttpConnectionFactory.class, "active-connections");
     addBean(connectionFactory);
   }
 
@@ -35,6 +40,10 @@ public class Jetty93InstrumentedConnectionFactory extends ContainerLifeCycle imp
 
   public Timer getTimer() {
     return timer;
+  }
+
+  public Counter getCounter() {
+    return counter;
   }
 
   @Override
@@ -58,11 +67,13 @@ public class Jetty93InstrumentedConnectionFactory extends ContainerLifeCycle imp
       @Override
       public void onOpened(Connection connection) {
         this.context = timer.time();
+        counter.inc();
       }
 
       @Override
       public void onClosed(Connection connection) {
         Preconditions.checkNotNull(context).stop();
+        counter.dec();
       }
     });
     return connection;

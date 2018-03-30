@@ -40,7 +40,6 @@ import com.yammer.dropwizard.validation.PortRange;
 import com.yammer.dropwizard.validation.ValidationMethod;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.core.Timer;
 
 /**
  * An object representation of the {@code http} section of the YAML configuration file.
@@ -466,15 +465,15 @@ public class HttpConfiguration {
 
     }
 
-    public Connector buildAdmin(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
-        return build(server, metrics, name, threadPool, getAdminPort());
+    public Connector buildAdmin(Server server, String name, @Nullable ThreadPool threadPool) {
+        // don't pollute the real metrics registry
+        return build(server, new MetricsRegistry(), name, threadPool, getAdminPort());
     }
 
     public Connector build(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool, int port) {
         final org.eclipse.jetty.server.HttpConfiguration httpConfig = buildHttpConfiguration(port);
 
         final HttpConnectionFactory httpConnectionFactory = buildHttpConnectionFactory(httpConfig);
-        final Timer timer = metrics.newTimer(HttpConnectionFactory.class, "connections", Integer.toString(port));
 
         final ConnectionFactory[] connectionFactories;
         if (isSslEnabled()) {
@@ -486,12 +485,12 @@ public class HttpConfiguration {
                 new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString());
 
             connectionFactories = new ConnectionFactory[]{
-                new Jetty93InstrumentedConnectionFactory(sslConnectionFactory, timer),
+                new Jetty93InstrumentedConnectionFactory(sslConnectionFactory, metrics),
                 httpConnectionFactory
             };
         } else {
             connectionFactories = new ConnectionFactory[]{
-                new Jetty93InstrumentedConnectionFactory(httpConnectionFactory, timer)
+                new Jetty93InstrumentedConnectionFactory(httpConnectionFactory, metrics)
             };
         }
 

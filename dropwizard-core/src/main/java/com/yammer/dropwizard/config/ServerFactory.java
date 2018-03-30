@@ -233,7 +233,7 @@ public class ServerFactory {
         threadPool.setName("dw-admin");
         server.addBean(threadPool);
 
-        return config.buildAdmin(server, metricsRegistry, "admin", threadPool);
+        return config.buildAdmin(server, "admin", threadPool);
     }
 
     private SecurityHandler basicAuthHandler(String username, String password) {
