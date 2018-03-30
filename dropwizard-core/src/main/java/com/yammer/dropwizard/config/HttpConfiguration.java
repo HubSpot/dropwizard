@@ -1,21 +1,42 @@
 package com.yammer.dropwizard.config;
 
+import java.util.Locale;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+import javax.validation.Valid;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.io.ArrayByteBufferPool;
+import org.eclipse.jetty.io.ByteBufferPool;
+import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
+import org.eclipse.jetty.util.thread.Scheduler;
+import org.eclipse.jetty.util.thread.ThreadPool;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-import com.yammer.dropwizard.validation.PortRange;
+import com.yammer.dropwizard.jetty.Jetty93InstrumentedConnectionFactory;
 import com.yammer.dropwizard.util.Duration;
 import com.yammer.dropwizard.util.Size;
+import com.yammer.dropwizard.validation.PortRange;
 import com.yammer.dropwizard.validation.ValidationMethod;
-
-import javax.validation.Valid;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import java.util.Locale;
-import java.util.Map;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.core.Timer;
 
 /**
  * An object representation of the {@code http} section of the YAML configuration file.
@@ -38,6 +59,16 @@ public class HttpConfiguration {
         @JsonCreator
         public static ConnectorType parse(String type) {
             return valueOf(type.toUpperCase(Locale.ENGLISH).replace('+', '_'));
+        }
+
+        public boolean isSsl() {
+            switch (this) {
+                case LEGACY_SSL:
+                case NONBLOCKING_SSL:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 
@@ -101,7 +132,7 @@ public class HttpConfiguration {
 
     @Min(-1)
     @JsonProperty
-    private int acceptQueueSize = -1;
+    private int acceptQueueSize = 128;
 
     @Min(1)
     @JsonProperty
@@ -424,5 +455,112 @@ public class HttpConfiguration {
 
     public void setAdminPassword(String password) {
         this.adminPassword = password;
+    }
+
+    public Connector buildApp(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
+        return build(server, metrics, name, threadPool, getPort());
+
+    }
+
+    public Connector buildAdmin(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool) {
+        return build(server, metrics, name, threadPool, getAdminPort());
+    }
+
+    public Connector build(Server server, MetricsRegistry metrics, String name, @Nullable ThreadPool threadPool, int port) {
+        final org.eclipse.jetty.server.HttpConfiguration httpConfig = buildHttpConfiguration(port);
+
+        final HttpConnectionFactory httpConnectionFactory = buildHttpConnectionFactory(httpConfig);
+        final Timer timer = metrics.newTimer(HttpConnectionFactory.class, "connections", Integer.toString(port));
+
+        final ConnectionFactory[] connectionFactories;
+        if (isSslEnabled()) {
+            final SslContextFactory sslContextFactory = ssl.build();
+
+            server.addBean(sslContextFactory);
+
+            final SslConnectionFactory sslConnectionFactory =
+                new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString());
+
+            connectionFactories = new ConnectionFactory[]{
+                new Jetty93InstrumentedConnectionFactory(sslConnectionFactory, timer),
+                httpConnectionFactory
+            };
+        } else {
+            connectionFactories = new ConnectionFactory[]{
+                new Jetty93InstrumentedConnectionFactory(httpConnectionFactory, timer)
+            };
+        }
+
+        final Scheduler scheduler = new ScheduledExecutorScheduler();
+
+        final ByteBufferPool bufferPool = buildBufferPool();
+
+        return buildConnector(server, scheduler, bufferPool, name, threadPool, port, connectionFactories);
+    }
+
+    protected ServerConnector buildConnector(Server server,
+                                             Scheduler scheduler,
+                                             ByteBufferPool bufferPool,
+                                             String name,
+                                             @Nullable ThreadPool threadPool,
+                                             int port,
+                                             ConnectionFactory... factories) {
+        final ServerConnector connector = new ServerConnector(server,
+                                                              threadPool,
+                                                              scheduler,
+                                                              bufferPool,
+                                                              getAcceptorThreads(),
+                                                              getAcceptorThreads() * 2,
+                                                              factories);
+        connector.setPort(port);
+        connector.setHost(getBindHost().orNull());
+        connector.setAcceptQueueSize(acceptQueueSize);
+
+        connector.setReuseAddress(reuseAddress);
+        if (soLingerTime != null) {
+            connector.setSoLingerTime((int) soLingerTime.toMilliseconds());
+        }
+        connector.setIdleTimeout(maxIdleTime.toMilliseconds());
+        connector.setName(name);
+
+        return connector;
+    }
+
+    protected HttpConnectionFactory buildHttpConnectionFactory(org.eclipse.jetty.server.HttpConfiguration httpConfig) {
+        final HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory(httpConfig);
+        httpConnectionFactory.setInputBufferSize((int) getRequestBufferSize().toBytes());
+        return httpConnectionFactory;
+    }
+
+    protected org.eclipse.jetty.server.HttpConfiguration buildHttpConfiguration(int port) {
+        final org.eclipse.jetty.server.HttpConfiguration httpConfig = new org.eclipse.jetty.server.HttpConfiguration();
+        httpConfig.setOutputBufferSize((int) getResponseBufferSize().toBytes());
+        httpConfig.setRequestHeaderSize((int) getRequestHeaderBufferSize().toBytes());
+        httpConfig.setResponseHeaderSize((int) getResponseHeaderBufferSize().toBytes());
+        httpConfig.setSendDateHeader(isDateHeaderEnabled());
+        httpConfig.setSendServerVersion(isServerHeaderEnabled());
+
+        if (useForwardedHeaders()) {
+            httpConfig.addCustomizer(new ForwardedRequestCustomizer());
+        }
+
+        if (isSslEnabled()) {
+            httpConfig.setSecureScheme("https");
+            httpConfig.setSecurePort(port);
+            httpConfig.addCustomizer(new SecureRequestCustomizer());
+        }
+
+        return httpConfig;
+    }
+
+    protected ByteBufferPool buildBufferPool() {
+        // hard-code for now
+        return new ArrayByteBufferPool((int) Size.bytes(64).toBytes(),
+                                       (int) Size.bytes(1024).toBytes(),
+                                       (int) Size.kilobytes(64).toBytes());
+    }
+
+    private boolean isSslEnabled() {
+        return getConnectorType().isSsl();
     }
 }

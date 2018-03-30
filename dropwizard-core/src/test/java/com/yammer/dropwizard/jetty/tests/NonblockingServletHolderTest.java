@@ -1,16 +1,19 @@
 package com.yammer.dropwizard.jetty.tests;
 
-import com.yammer.dropwizard.jetty.NonblockingServletHolder;
-import org.eclipse.jetty.server.Request;
-import org.junit.Test;
-import org.mockito.InOrder;
+import static org.fest.assertions.api.Assertions.assertThat;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import static org.fest.assertions.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import org.eclipse.jetty.server.Request;
+import org.junit.Test;
+import org.mockito.InOrder;
+
+import com.yammer.dropwizard.jetty.NonblockingServletHolder;
 
 public class NonblockingServletHolderTest {
     private final Servlet servlet = mock(Servlet.class);
@@ -40,7 +43,7 @@ public class NonblockingServletHolderTest {
 
         final InOrder inOrder = inOrder(baseRequest, servlet);
 
-        inOrder.verify(baseRequest).setAsyncSupported(false);
+        inOrder.verify(baseRequest).setAsyncSupported(false, null);
         inOrder.verify(servlet).service(request, response);
     }
 }

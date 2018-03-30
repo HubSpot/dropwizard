@@ -1,10 +1,16 @@
 package com.yammer.dropwizard.servlets;
 
-import org.eclipse.jetty.http.HttpHeaders;
-
-import javax.servlet.*;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
+
+import com.google.common.net.HttpHeaders;
 
 /**
  * Adds a no-cache header to all responses.

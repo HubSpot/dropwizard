@@ -1,10 +1,12 @@
 package com.yammer.dropwizard.jetty;
 
-import org.eclipse.jetty.http.HttpHeaders;
-import org.eclipse.jetty.server.Handler;
+import com.google.common.collect.ImmutableSortedSet;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.GzipHandler;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 
+import javax.annotation.Nullable;
+import javax.servlet.ReadListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -12,25 +14,154 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.zip.GZIPInputStream;
-
-// TODO: 10/12/11 <coda> -- write tests for BiDiGzipHandler
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 /**
- * A Jetty {@link Handler} which both compresses response entities to requests with {@code gzip} as
- * an acceptable content-encoding and decompresses request entities with {@code gzip} as the given
- * content-encoding.
+ * An extension of {@link GzipHandler} which decompresses gzip- and deflate-encoded request
+ * entities.
  */
-@SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
 public class BiDiGzipHandler extends GzipHandler {
-    private static final String GZIP_ENCODING = "gzip";
 
-    private static class GzipServletInputStream extends ServletInputStream {
-        private final GZIPInputStream input;
+    private static final ThreadLocal<Inflater> localInflater = new ThreadLocal<Inflater>();
 
-        private GzipServletInputStream(HttpServletRequest request, int bufferSize) throws IOException {
-            this.input = new GZIPInputStream(request.getInputStream(), bufferSize);
+    /**
+     * Size of the buffer for decompressing requests
+     */
+    private int inputBufferSize = 8192;
+
+    /**
+     * Whether inflating (decompressing) of deflate-encoded requests
+     * should be performed in the GZIP-compatible mode
+     */
+    private boolean inflateNoWrap = true;
+
+    public boolean isInflateNoWrap() {
+        return inflateNoWrap;
+    }
+
+    public void setInflateNoWrap(boolean inflateNoWrap) {
+        this.inflateNoWrap = inflateNoWrap;
+    }
+
+    public void setInputBufferSize(int inputBufferSize) {
+        this.inputBufferSize = inputBufferSize;
+    }
+
+    @Override
+    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException {
+        final String encoding = request.getHeader(HttpHeader.CONTENT_ENCODING.asString());
+        if (GZIP.equalsIgnoreCase(encoding)) {
+            super.handle(target, baseRequest, wrapGzippedRequest(removeContentHeaders(request)), response);
+        } else if (DEFLATE.equalsIgnoreCase(encoding)) {
+            super.handle(target, baseRequest, wrapDeflatedRequest(removeContentHeaders(request)), response);
+        } else {
+            super.handle(target, baseRequest, request, response);
+        }
+    }
+
+    private Inflater buildInflater() {
+        final Inflater inflater = localInflater.get();
+        if (inflater != null) {
+            // The request could fail in the middle of decompressing, so potentially we can get
+            // a broken inflater in the thread local storage. That's why we need to clear the storage.
+            localInflater.set(null);
+
+            // Reuse the inflater from the thread local storage
+            inflater.reset();
+            return inflater;
+        } else {
+            return new Inflater(inflateNoWrap);
+        }
+    }
+
+    private WrappedServletRequest wrapDeflatedRequest(HttpServletRequest request) throws IOException {
+        final Inflater inflater = buildInflater();
+        try {
+            final InflaterInputStream input = new InflaterInputStream(request.getInputStream(), inflater, inputBufferSize) {
+                @Override
+                public void close() throws IOException {
+                    super.close();
+                    localInflater.set(inflater);
+                }
+            };
+            return new WrappedServletRequest(request, new ZipExceptionHandlingInputStream(input, DEFLATE));
+        } catch (IOException e) {
+            throw ZipExceptionHandlingInputStream.handleException(DEFLATE, e);
+        }
+    }
+
+    private WrappedServletRequest wrapGzippedRequest(HttpServletRequest request) throws IOException {
+        try {
+            final GZIPInputStream input = new GZIPInputStream(request.getInputStream(), inputBufferSize);
+            return new WrappedServletRequest(request, new ZipExceptionHandlingInputStream(input, GZIP));
+        } catch (IOException e) {
+            throw ZipExceptionHandlingInputStream.handleException(GZIP, e);
+        }
+    }
+
+    private HttpServletRequest removeContentHeaders(final HttpServletRequest request) {
+        // The decoded content is plain and generated dynamically, therefore the "Content-Encoding" and "Content-Length"
+        // headers should be removed after after the processing.
+        return new RemoveHttpHeadersWrapper(request, ImmutableSortedSet.orderedBy(String.CASE_INSENSITIVE_ORDER)
+            .add(HttpHeader.CONTENT_ENCODING.asString())
+            .add(HttpHeader.CONTENT_LENGTH.asString())
+            .build());
+    }
+
+    private static class WrappedServletRequest extends HttpServletRequestWrapper {
+        private final ServletInputStream input;
+        private final BufferedReader reader;
+
+        private WrappedServletRequest(HttpServletRequest request,
+                                      InputStream inputStream) throws IOException {
+            super(request);
+            this.input = new WrappedServletInputStream(inputStream);
+            this.reader = new BufferedReader(new InputStreamReader(input, getCharset()));
+        }
+
+        private Charset getCharset() {
+            final String encoding = getCharacterEncoding();
+            if (encoding == null || !Charset.isSupported(encoding)) {
+                return Charset.forName("ISO-8859-1");
+            }
+            return Charset.forName(encoding);
+        }
+
+        @Override
+        public ServletInputStream getInputStream() throws IOException {
+            return input;
+        }
+
+        @Override
+        public BufferedReader getReader() throws IOException {
+            return reader;
+        }
+
+        @Override
+        public int getContentLength() {
+            // Because the we replace the original stream, the new content length is not known.
+            return -1;
+        }
+
+        @Override
+        public long getContentLengthLong() {
+            return -1L;
+        }
+    }
+
+    private static class WrappedServletInputStream extends ServletInputStream {
+        private final InputStream input;
+
+        private WrappedServletInputStream(InputStream input) {
+            this.input = input;
         }
 
         @Override
@@ -77,50 +208,98 @@ public class BiDiGzipHandler extends GzipHandler {
         public int read(byte[] b) throws IOException {
             return input.read(b);
         }
+
+        @Override
+        public boolean isFinished() {
+            try {
+                return input.available() == 0;
+            } catch (IOException ignored) {
+            }
+            return true;
+        }
+
+        @Override
+        public boolean isReady() {
+            try {
+                return input.available() > 0;
+            } catch (IOException ignored) {
+            }
+            return false;
+        }
+
+        @Override
+        public void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException();
+        }
     }
 
-    private static class GzipServletRequest extends HttpServletRequestWrapper {
-        private final ServletInputStream input;
-        private final BufferedReader reader;
+    private static class RemoveHttpHeadersWrapper extends HttpServletRequestWrapper {
+        private final ImmutableSortedSet<String> headerNames;
 
-        private GzipServletRequest(HttpServletRequest request, int bufferSize) throws IOException {
+        RemoveHttpHeadersWrapper(final HttpServletRequest request, final ImmutableSortedSet<String> headerNames) {
             super(request);
-            this.input = new GzipServletInputStream(request, bufferSize);
-            this.reader = new BufferedReader(new InputStreamReader(input));
+            this.headerNames = headerNames;
         }
 
+        /**
+         * The default behavior of this method is to return
+         * getIntHeader(String name) on the wrapped request object.
+         *
+         * @param name a <code>String</code> specifying the name of a request header
+         */
         @Override
-        public ServletInputStream getInputStream() throws IOException {
-            return input;
+        public int getIntHeader(final String name) {
+            if (headerNames.contains(name)) {
+                return -1;
+            } else {
+                return super.getIntHeader(name);
+            }
         }
 
+        /**
+         * The default behavior of this method is to return getHeaders(String name)
+         * on the wrapped request object.
+         *
+         * @param name a <code>String</code> specifying the name of a request header
+         */
         @Override
-        public BufferedReader getReader() throws IOException {
-            return reader;
+        public Enumeration<String> getHeaders(final String name) {
+            if (headerNames.contains(name)) {
+                return Collections.emptyEnumeration();
+            } else {
+                return super.getHeaders(name);
+            }
         }
-    }
 
-    /**
-     * Creates a new BiDiGzipHandler which forwards requests to the given handler.
-     *
-     * @param underlying    the underlying handler
-     */
-    public BiDiGzipHandler(Handler underlying) {
-        setHandler(underlying);
-    }
+        /**
+         * The default behavior of this method is to return getHeader(String name)
+         * on the wrapped request object.
+         *
+         * @param name a <code>String</code> specifying the name of a request header
+         */
+        @Override
+        @Nullable
+        public String getHeader(final String name) {
+            if (headerNames.contains(name)) {
+                return null;
+            } else {
+                return super.getHeader(name);
+            }
+        }
 
-    @Override
-    public void handle(String target,
-                       Request baseRequest,
-                       HttpServletRequest request,
-                       HttpServletResponse response) throws IOException, ServletException {
-        if (GZIP_ENCODING.equalsIgnoreCase(request.getHeader(HttpHeaders.CONTENT_ENCODING))) {
-            super.handle(target,
-                         baseRequest,
-                         new GzipServletRequest(request, getBufferSize()),
-                         response);
-        } else {
-            super.handle(target, baseRequest, request, response);
+        /**
+         * The default behavior of this method is to return getDateHeader(String name)
+         * on the wrapped request object.
+         *
+         * @param name a <code>String</code> specifying the name of a request header
+         */
+        @Override
+        public long getDateHeader(final String name) {
+            if (headerNames.contains(name)) {
+                return -1L;
+            } else {
+                return super.getDateHeader(name);
+            }
         }
     }
 }

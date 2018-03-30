@@ -1,16 +1,21 @@
 package com.yammer.dropwizard.config;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.io.File;
+import java.net.URI;
+import java.security.KeyStore;
+import java.util.List;
+
+import javax.validation.constraints.NotNull;
+
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.hibernate.validator.constraints.NotEmpty;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import org.hibernate.validator.constraints.NotEmpty;
-
-import javax.validation.constraints.NotNull;
-import java.io.File;
-import java.net.URI;
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.collect.Iterables;
 
 @SuppressWarnings("UnusedDeclaration")
 public class SslConfiguration {
@@ -243,5 +248,108 @@ public class SslConfiguration {
 
     public void setValidatePeers(Optional<Boolean> validatePeers) {
         this.validatePeers = validatePeers;
+    }
+
+    public SslContextFactory build() {
+        SslContextFactory factory = new SslContextFactory();
+
+        for (File keyStore : getKeyStore().asSet()) {
+            factory.setKeyStorePath(keyStore.getAbsolutePath());
+        }
+
+        for (String password : getKeyStorePassword().asSet()) {
+            factory.setKeyStorePassword(password);
+        }
+
+        for (String password : getKeyManagerPassword().asSet()) {
+            factory.setKeyManagerPassword(password);
+        }
+
+        for (String certAlias : getCertAlias().asSet()) {
+            factory.setCertAlias(certAlias);
+        }
+
+        final String keyStoreType = getKeyStoreType();
+        if (keyStoreType.startsWith("Windows-")) {
+            try {
+                final KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+
+                keyStore.load(null, null);
+                factory.setKeyStore(keyStore);
+
+            } catch (Exception e) {
+                throw new IllegalStateException("Windows key store not supported", e);
+            }
+        } else {
+            factory.setKeyStoreType(keyStoreType);
+        }
+
+        for (File trustStore : getTrustStore().asSet()) {
+            factory.setTrustStorePath(trustStore.getAbsolutePath());
+        }
+
+        for (String password : getTrustStorePassword().asSet()) {
+            factory.setTrustStorePassword(password);
+        }
+
+        final String trustStoreType = getTrustStoreType();
+        if (trustStoreType.startsWith("Windows-")) {
+            try {
+                final KeyStore keyStore = KeyStore.getInstance(trustStoreType);
+
+                keyStore.load(null, null);
+                factory.setTrustStore(keyStore);
+
+            } catch (Exception e) {
+                throw new IllegalStateException("Windows key store not supported", e);
+            }
+        } else {
+            factory.setTrustStoreType(trustStoreType);
+        }
+
+        for (Boolean needClientAuth : getNeedClientAuth().asSet()) {
+            factory.setNeedClientAuth(needClientAuth);
+        }
+
+        for (Boolean wantClientAuth : getWantClientAuth().asSet()) {
+            factory.setWantClientAuth(wantClientAuth);
+        }
+
+        for (Boolean allowRenegotiate : getAllowRenegotiate().asSet()) {
+            factory.setRenegotiationAllowed(allowRenegotiate);
+        }
+
+        for (File crlPath : getCrlPath().asSet()) {
+            factory.setCrlPath(crlPath.getAbsolutePath());
+        }
+
+        for (Boolean enable : getCrldpEnabled().asSet()) {
+            factory.setEnableCRLDP(enable);
+        }
+
+        for (Boolean enable : getOcspEnabled().asSet()) {
+            factory.setEnableOCSP(enable);
+        }
+
+        for (Integer length : getMaxCertPathLength().asSet()) {
+            factory.setMaxCertPathLength(length);
+        }
+
+        for (URI uri : getOcspResponderUrl().asSet()) {
+            factory.setOcspResponderURL(uri.toASCIIString());
+        }
+
+        for (String provider : getJceProvider().asSet()) {
+            factory.setProvider(provider);
+        }
+
+        for (Boolean validate : getValidatePeers().asSet()) {
+            factory.setValidatePeerCerts(validate);
+        }
+
+        factory.setIncludeProtocols(Iterables.toArray(getSupportedProtocols(),
+            String.class));
+
+        return factory;
     }
 }

@@ -1,13 +1,18 @@
 package com.yammer.dropwizard.config;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
-import com.yammer.dropwizard.util.Size;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import javax.validation.constraints.NotNull;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.validation.constraints.NotNull;
+
+import org.eclipse.jetty.server.Handler;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.yammer.dropwizard.jetty.BiDiGzipHandler;
+import com.yammer.dropwizard.util.Size;
 
 @SuppressWarnings("UnusedDeclaration")
 public class GzipConfiguration {
@@ -65,5 +70,33 @@ public class GzipConfiguration {
 
     public void setCompressedMimeTypes(Set<String> mimeTypes) {
         this.compressedMimeTypes = ImmutableSet.copyOf(mimeTypes);
+    }
+
+    public Handler build(Handler handler) {
+        if (!isEnabled()) {
+            return handler;
+        } else {
+            final BiDiGzipHandler gzipHandler = new BiDiGzipHandler();
+            gzipHandler.setHandler(handler);
+            gzipHandler.setInflateNoWrap(true);
+
+            final Size minEntitySize = getMinimumEntitySize();
+            gzipHandler.setMinGzipSize((int) minEntitySize.toBytes());
+
+            final Size bufferSize = getBufferSize();
+            gzipHandler.setInputBufferSize((int) bufferSize.toBytes());
+
+            final ImmutableSet<String> userAgents = getExcludedUserAgents();
+            if (!userAgents.isEmpty()) {
+                gzipHandler.setExcludedAgentPatterns(Iterables.toArray(userAgents, String.class));
+            }
+
+            final ImmutableSet<String> mimeTypes = getCompressedMimeTypes();
+            if (!mimeTypes.isEmpty()) {
+                gzipHandler.setIncludedMimeTypes(Iterables.toArray(mimeTypes, String.class));
+            }
+
+            return gzipHandler;
+        }
     }
 }
