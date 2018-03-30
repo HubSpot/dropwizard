@@ -16,6 +16,7 @@ import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.DateCache;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 
+import com.google.common.base.Optional;
 import com.google.common.net.HttpHeaders;
 import com.yammer.metrics.core.Clock;
 
@@ -176,14 +177,14 @@ public class AsyncRequestLog extends AbstractLifeCycle implements RequestLog {
             buf.append(" -");
         }
 
-        final long now = clock.time();
+        long queueTime = Optional.fromNullable((Long) request.getAttribute("_queue_time_millis")).or(0L);
+        long processingTime = clock.time() - request.getTimeStamp();
 
         buf.append(' ');
-        // TODO do we need to find an equivalent for request.getDispatchTime() ?
-        buf.append(now - request.getTimeStamp());
+        buf.append(queueTime + processingTime);
 
         buf.append(' ');
-        buf.append(now - request.getTimeStamp());
+        buf.append(processingTime);
 
         queue.add(buf.toString());
     }
