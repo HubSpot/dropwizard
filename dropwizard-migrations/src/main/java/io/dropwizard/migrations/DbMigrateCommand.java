@@ -3,14 +3,10 @@ package io.dropwizard.migrations;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 
@@ -46,10 +42,10 @@ public class DbMigrateCommand extends AbstractLiquibaseCommand {
                  .help("only apply the next N change sets");
 
         subparser.addArgument("-i", "--include")
-                 .action(Arguments.append())
+                 .action(Arguments.store())
                  .dest("contexts")
                  .setDefault("job,service")
-                 .help("include change sets from the given context");
+                 .help("include change sets from the given contexts");
     }
 
     @Override
@@ -75,11 +71,8 @@ public class DbMigrateCommand extends AbstractLiquibaseCommand {
     }
 
     private String getContext(Namespace namespace) {
-        final List<Object> contexts = namespace.getList("contexts");
-        if (contexts == null) {
-            return "";
-        }
-        return Joiner.on(',').join(contexts);
+        final String contexts = namespace.get("contexts");
+        return contexts == null ? "" : contexts;
     }
 
     private static void validateContext(String context, Liquibase liquibase) {

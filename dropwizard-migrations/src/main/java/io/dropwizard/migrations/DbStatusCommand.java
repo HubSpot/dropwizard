@@ -1,17 +1,16 @@
 package io.dropwizard.migrations;
 
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
-
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 public class DbStatusCommand extends AbstractLiquibaseCommand {
 
@@ -33,9 +32,9 @@ public class DbStatusCommand extends AbstractLiquibaseCommand {
                  .dest("verbose")
                  .help("Output verbose information");
         subparser.addArgument("-i", "--include")
-                 .action(Arguments.append())
+                 .action(Arguments.store())
                  .dest("contexts")
-                 .help("include change sets from the given context");
+                 .help("include change sets from the given contexts");
     }
 
     @Override
@@ -47,10 +46,7 @@ public class DbStatusCommand extends AbstractLiquibaseCommand {
     }
 
     private String getContext(Namespace namespace) {
-        final List<Object> contexts = namespace.getList("contexts");
-        if (contexts == null) {
-            return "";
-        }
-        return Joiner.on(',').join(contexts);
+        final String contexts = namespace.get("contexts");
+        return contexts == null ? "" : contexts;
     }
 }

@@ -1,14 +1,12 @@
 package io.dropwizard.migrations;
 
-import com.google.common.base.Joiner;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+
 import liquibase.Liquibase;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
-
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 public class DbPrepareRollbackCommand extends AbstractLiquibaseCommand {
     public DbPrepareRollbackCommand() {
@@ -23,9 +21,9 @@ public class DbPrepareRollbackCommand extends AbstractLiquibaseCommand {
                  .help("limit script to the specified number of pending change sets");
 
         subparser.addArgument("-i", "--include")
-                 .action(Arguments.append())
+                 .action(Arguments.store())
                  .dest("contexts")
-                 .help("include change sets from the given context");
+                 .help("include change sets from the given contexts");
     }
 
     @Override
@@ -41,10 +39,7 @@ public class DbPrepareRollbackCommand extends AbstractLiquibaseCommand {
     }
 
     private String getContext(Namespace namespace) {
-        final List<Object> contexts = namespace.getList("contexts");
-        if (contexts == null) {
-            return "";
-        }
-        return Joiner.on(',').join(contexts);
+        final String contexts = namespace.get("contexts");
+        return contexts == null ? "" : contexts;
     }
 }
