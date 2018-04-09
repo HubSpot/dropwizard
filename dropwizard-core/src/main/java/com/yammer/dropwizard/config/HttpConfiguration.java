@@ -557,7 +557,6 @@ public class HttpConfiguration {
 
     protected org.eclipse.jetty.server.HttpConfiguration buildHttpConfiguration(int port) {
         final org.eclipse.jetty.server.HttpConfiguration httpConfig = new org.eclipse.jetty.server.HttpConfiguration();
-        httpConfig.setOutputBufferSize((int) getResponseBufferSize().toBytes());
         httpConfig.setRequestHeaderSize((int) getRequestHeaderBufferSize().toBytes());
         httpConfig.setResponseHeaderSize((int) getResponseHeaderBufferSize().toBytes());
         httpConfig.setSendDateHeader(isDateHeaderEnabled());
