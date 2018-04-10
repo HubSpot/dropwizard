@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.dropwizard.jersey.JacksonMessageBodyProvider;
-import com.yammer.dropwizard.jetty.ContextRoutingHandler;
+import com.yammer.dropwizard.jetty.AdminRoutingHandler;
 import com.yammer.dropwizard.jetty.InstrumentedHandler;
 import com.yammer.dropwizard.jetty.InstrumentedQueuedThreadPool;
 import com.yammer.dropwizard.jetty.RoutingHandler;
@@ -120,10 +120,7 @@ public class ServerFactory {
 
             server.addConnector(conn);
 
-            routingHandler = new ContextRoutingHandler(ImmutableMap.of(
-                config.getRootPath(), applicationHandler,
-                "/admin", adminHandler
-            ));
+            routingHandler = new AdminRoutingHandler(applicationHandler, adminHandler);
         } else {
             // use "default" server with multiple connectors
             final Map<Connector, Handler> handlers = new LinkedHashMap<Connector, Handler>();
