@@ -56,7 +56,7 @@ public class Duration {
 
         SUFFIXES = suffixes.build();
     }
-    
+
     public static Duration nanoseconds(long count) {
         return new Duration(count, TimeUnit.NANOSECONDS);
     }
@@ -84,16 +84,16 @@ public class Duration {
     public static Duration days(long count) {
         return new Duration(count, TimeUnit.DAYS);
     }
-    
+
     private static long parseCount(String s) {
         checkArgument(PATTERN.matcher(s).matches(), "Invalid duration: %s", s);
-        final String value = CharMatcher.WHITESPACE.removeFrom(s);
-        return Long.parseLong(CharMatcher.JAVA_LETTER.trimTrailingFrom(value));
+        final String value = CharMatcher.whitespace().removeFrom(s);
+        return Long.parseLong(CharMatcher.javaLetter().trimTrailingFrom(value));
     }
-    
+
     private static TimeUnit parseUnit(String s) {
-        final String value = CharMatcher.WHITESPACE.removeFrom(s);
-        final String suffix = CharMatcher.DIGIT.trimLeadingFrom(value);
+        final String value = CharMatcher.whitespace().removeFrom(s);
+        final String suffix = CharMatcher.digit().trimLeadingFrom(value);
         return SUFFIXES.get(suffix);
     }
 
