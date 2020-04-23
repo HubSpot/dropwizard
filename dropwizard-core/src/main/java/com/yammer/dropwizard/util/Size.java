@@ -47,7 +47,7 @@ public class Size {
 
         SUFFIXES = suffixes.build();
     }
-    
+
     public static Size bytes(long count) {
         return new Size(count, SizeUnit.BYTES);
     }
@@ -70,13 +70,13 @@ public class Size {
 
     private static long parseCount(String s) {
         checkArgument(PATTERN.matcher(s).matches(), "Invalid size: %s", s);
-        final String value = CharMatcher.WHITESPACE.removeFrom(s);
-        return Long.parseLong(CharMatcher.JAVA_LETTER.trimTrailingFrom(value));
+        final String value = CharMatcher.whitespace().removeFrom(s);
+        return Long.parseLong(CharMatcher.javaLetter().trimTrailingFrom(value));
     }
 
     private static SizeUnit parseUnit(String s) {
-        final String value = CharMatcher.WHITESPACE.removeFrom(s);
-        final String suffix = CharMatcher.DIGIT.trimLeadingFrom(value).trim();
+        final String value = CharMatcher.whitespace().removeFrom(s);
+        final String suffix = CharMatcher.digit().trimLeadingFrom(value).trim();
         return SUFFIXES.get(suffix);
     }
 

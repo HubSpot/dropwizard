@@ -1,7 +1,7 @@
 package com.yammer.dropwizard.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -87,7 +87,7 @@ public class Configuration {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("http", http)
                       .add("logging", logging)
                       .toString();
