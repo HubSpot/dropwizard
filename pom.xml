@@ -4,7 +4,7 @@
 
     <groupId>io.dropwizard</groupId>
     <artifactId>dropwizard-parent</artifactId>
-    <version>1.3.30-SNAPSHOT</version>
+    <version>1.3.30-hubspot-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Dropwizard Project</name>
@@ -15,7 +15,9 @@
     </description>
 
     <modules>
+<!--
         <module>docs</module>
+-->
         <module>dropwizard-bom</module>
         <module>dropwizard-core</module>
         <module>dropwizard-client</module>
@@ -25,7 +27,9 @@
         <module>dropwizard-migrations</module>
         <module>dropwizard-hibernate</module>
         <module>dropwizard-auth</module>
+<!--
         <module>dropwizard-example</module>
+-->
         <module>dropwizard-forms</module>
         <module>dropwizard-views</module>
         <module>dropwizard-views-freemarker</module>
@@ -43,11 +47,15 @@
         <module>dropwizard-servlets</module>
         <module>dropwizard-lifecycle</module>
         <module>dropwizard-assets</module>
+<!--
         <module>dropwizard-archetypes</module>
         <module>dropwizard-benchmarks</module>
+-->
         <module>dropwizard-http2</module>
         <module>dropwizard-request-logging</module>
+<!--
         <module>dropwizard-e2e</module>
+-->
         <module>dropwizard-json-logging</module>
     </modules>
 

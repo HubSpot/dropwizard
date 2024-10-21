@@ -1,0 +1,7 @@
+buildpack:
+  name: Blazar-Buildpack-Java-single-module
+
+env:
+  MAVEN_BUILD_ARGS: -DskipTests
+  SET_VERSION_OVERRIDE: 1.3-$GIT_BRANCH-SNAPSHOT
+  SKIP_VERSION_OVERRIDE_ON_BRANCH: 1.3-hubspot
