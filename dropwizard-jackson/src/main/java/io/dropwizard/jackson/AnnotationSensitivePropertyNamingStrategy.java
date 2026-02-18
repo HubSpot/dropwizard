@@ -1,5 +1,6 @@
 package io.dropwizard.jackson;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedField;
@@ -15,11 +16,11 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedParameter;
 public class AnnotationSensitivePropertyNamingStrategy extends PropertyNamingStrategy {
     private static final long serialVersionUID = -1372862028366311230L;
 
-    private final SnakeCaseStrategy snakeCase;
+    private final PropertyNamingStrategies.SnakeCaseStrategy snakeCase;
 
     public AnnotationSensitivePropertyNamingStrategy() {
         super();
-        this.snakeCase = new SnakeCaseStrategy();
+        this.snakeCase =new PropertyNamingStrategies.SnakeCaseStrategy();
     }
 
     @Override
