@@ -1,7 +1,7 @@
 package io.dropwizard.setup;
 
-import io.dropwizard.jersey.errors.EarlyEofExceptionMapper;
 import com.codahale.metrics.MetricRegistry;
+import io.dropwizard.jersey.errors.EarlyEofExceptionMapper;
 import io.dropwizard.jersey.errors.EofExceptionWriterInterceptor;
 import io.dropwizard.jersey.errors.IllegalStateExceptionMapper;
 import io.dropwizard.jersey.errors.LoggingExceptionMapper;
