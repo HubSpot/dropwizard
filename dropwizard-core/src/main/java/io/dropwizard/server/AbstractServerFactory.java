@@ -541,7 +541,7 @@ public abstract class AbstractServerFactory implements ServerFactory {
             jersey.register(new JacksonBinder(objectMapper));
             jersey.register(new HibernateValidationFeature(validator));
             if (registerDefaultExceptionMappers == null || registerDefaultExceptionMappers) {
-                jersey.register(new ExceptionMapperBinder(detailedJsonProcessingExceptionMapper));
+                jersey.register(new ExceptionMapperBinder(detailedJsonProcessingExceptionMapper, metricRegistry));
             }
             handler.addServlet(new ServletHolder("jersey", jerseyContainer), jersey.getUrlPattern());
         }

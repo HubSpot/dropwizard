@@ -33,7 +33,7 @@ class DropwizardTestResourceConfig extends DropwizardResourceConfig {
         super(true, configuration.metricRegistry);
 
         if (configuration.registerDefaultExceptionMappers) {
-            register(new ExceptionMapperBinder(false));
+            register(new ExceptionMapperBinder(false, configuration.metricRegistry));
         }
         for (Class<?> provider : configuration.providers) {
             register(provider);

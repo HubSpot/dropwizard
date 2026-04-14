@@ -1,6 +1,7 @@
 package io.dropwizard.setup;
 
 import io.dropwizard.jersey.errors.EarlyEofExceptionMapper;
+import com.codahale.metrics.MetricRegistry;
 import io.dropwizard.jersey.errors.EofExceptionWriterInterceptor;
 import io.dropwizard.jersey.errors.IllegalStateExceptionMapper;
 import io.dropwizard.jersey.errors.LoggingExceptionMapper;
@@ -18,9 +19,11 @@ import javax.ws.rs.ext.WriterInterceptor;
  */
 public class ExceptionMapperBinder extends AbstractBinder {
     private final boolean showDetails;
+    private final MetricRegistry metricRegistry;
 
-    public ExceptionMapperBinder(boolean showDetails) {
+    public ExceptionMapperBinder(boolean showDetails, MetricRegistry metricRegistry) {
         this.showDetails = showDetails;
+        this.metricRegistry = metricRegistry;
     }
 
     @Override
@@ -32,7 +35,7 @@ public class ExceptionMapperBinder extends AbstractBinder {
         bind(new EarlyEofExceptionMapper()).to(ExceptionMapper.class);
         bind(new EmptyOptionalExceptionMapper()).to(ExceptionMapper.class);
         bind(new IllegalStateExceptionMapper()).to(ExceptionMapper.class);
-        bind(EofExceptionWriterInterceptor.class).to(WriterInterceptor.class);
+        bind(new EofExceptionWriterInterceptor(metricRegistry)).to(WriterInterceptor.class);
     }
 
     public boolean isShowDetails() {
